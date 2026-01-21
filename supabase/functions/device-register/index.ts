@@ -57,6 +57,14 @@ async function generateUniqueUID(supabaseClient: any): Promise<string> {
   return uid;
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// ⚠️ RÈGLE DE SÉCURITÉ CRITIQUE ⚠️
+// UID + PIN sont générés UNIQUEMENT à la PREMIÈRE inscription
+// Ils ne sont JAMAIS recréés, même si le device revient
+// Le PIN n'est retourné qu'UNE SEULE FOIS (status 201)
+// Toute modification de cette logique doit être validée par l'équipe sécurité
+// ══════════════════════════════════════════════════════════════════════════
+
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -103,7 +111,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (existingDevice) {
-      console.log('[device-register] Device already exists:', existingDevice.device_id);
+      // ══════════════════════════════════════════════════════════════════════
+      // SÉCURITÉ: Device déjà enregistré - retourner UID existant SANS PIN
+      // Le PIN n'est JAMAIS renvoyé après la création initiale
+      // ══════════════════════════════════════════════════════════════════════
+      console.log('[device-register] SECURITY: Device already registered, returning existing UID without PIN');
+      console.log('[device-register] device_id:', existingDevice.device_id, 'uid:', existingDevice.uid);
       
       // Update last_seen and device info
       const { error: updateError } = await supabase
@@ -133,8 +146,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // === NOUVEAU DEVICE ===
-    console.log('[device-register] Creating new device with UID and PIN');
+    // ══════════════════════════════════════════════════════════════════════
+    // NOUVEAU DEVICE - Génération unique UID + PIN
+    // Cette section ne s'exécute qu'UNE SEULE FOIS par device_id
+    // ══════════════════════════════════════════════════════════════════════
+    console.log('[device-register] SECURITY: Creating NEW device with UID and PIN');
+    console.log('[device-register] device_id:', body.device_id);
 
     // 1. Générer UID unique
     const uid = await generateUniqueUID(supabase);
@@ -143,9 +160,9 @@ Deno.serve(async (req: Request) => {
     // 2. Générer et hasher le PIN
     const pin = generatePIN();
     const pinHash = await bcrypt.hash(pin);
-    console.log('[device-register] PIN generated and hashed');
+    console.log('[device-register] PIN generated and hashed (PIN will be returned ONCE)');
 
-    // 3. Créer le nouveau device
+    // 3. Créer le nouveau device avec protection contre les race conditions
     const newDevice = {
       device_id: body.device_id,
       platform: body.platform,
@@ -161,21 +178,42 @@ Deno.serve(async (req: Request) => {
       days_left: 7,
       first_seen: new Date().toISOString(),
       last_seen: new Date().toISOString(),
-      // Nouveaux champs UID/PIN
       uid,
       pin_hash: pinHash,
       pin_created_at: new Date().toISOString(),
     };
 
+    // Utiliser upsert avec onConflict pour éviter les race conditions
+    // Si deux requêtes arrivent simultanément, seule la première crée le device
     const { data, error } = await supabase
       .from('devices')
-      .insert(newDevice)
+      .upsert(newDevice, { 
+        onConflict: 'device_id',
+        ignoreDuplicates: true 
+      })
       .select()
       .single();
 
     if (error) {
       console.error('[device-register] Insert error:', error);
       throw error;
+    }
+    
+    // Vérifier si c'est vraiment une nouvelle création (le UID correspond)
+    if (data.uid !== uid) {
+      // Race condition détectée : un autre processus a créé le device
+      console.log('[device-register] SECURITY: Race condition detected, device was created by another request');
+      console.log('[device-register] Returning existing device without PIN');
+      return new Response(
+        JSON.stringify({
+          status: data.status,
+          uid: data.uid,
+          days_left: data.days_left,
+          trial_end: data.trial_end,
+          manual_override: data.manual_override,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('[device-register] Device registered successfully:', data.device_id, 'UID:', uid);
