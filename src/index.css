@@ -2,95 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Nova Player Admin Design System
+   Dark-first tech aesthetic with cyan accents
 */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 240 10% 4%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 240 10% 6%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 240 10% 8%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 187 100% 50%;
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 10% 12%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 215 20% 55%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 187 100% 50%;
+    --accent-foreground: 240 10% 4%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 240 10% 18%;
+    --input: 240 10% 15%;
+    --ring: 187 100% 50%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Nova custom tokens */
+    --nova-cyan: 187 100% 50%;
+    --nova-cyan-glow: 187 100% 60%;
+    --nova-blue: 217 91% 60%;
+    --nova-purple: 270 70% 60%;
+    --nova-green: 142 76% 45%;
+    --nova-yellow: 45 93% 58%;
+    --nova-orange: 25 95% 53%;
+    --nova-red: 0 84% 60%;
+    
+    /* Status colors */
+    --status-trial: 45 93% 58%;
+    --status-active: 142 76% 45%;
+    --status-expired: 25 95% 53%;
+    --status-banned: 0 84% 60%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Gradients */
+    --gradient-nova: linear-gradient(135deg, hsl(187 100% 50%) 0%, hsl(217 91% 60%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(240 10% 8%) 0%, hsl(240 10% 5%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(187 100% 50% / 0.15) 0%, transparent 70%);
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Shadows */
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.5), 0 4px 6px -4px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 20px hsl(187 100% 50% / 0.3);
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 240 10% 5%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 187 100% 50%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 240 10% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 240 10% 15%;
+    --sidebar-ring: 187 100% 50%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 240 10% 4%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 240 10% 6%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 240 10% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 187 100% 50%;
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 240 10% 12%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 215 20% 55%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 187 100% 50%;
+    --accent-foreground: 240 10% 4%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 240 10% 18%;
+    --input: 240 10% 15%;
+    --ring: 187 100% 50%;
+    
+    --sidebar-background: 240 10% 5%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 187 100% 50%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 240 10% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 240 10% 15%;
+    --sidebar-ring: 187 100% 50%;
   }
 }
 
@@ -100,6 +123,94 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer utilities {
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px hsl(var(--nova-cyan) / 0.5), 0 0 20px hsl(var(--nova-cyan) / 0.3);
+  }
+
+  .bg-glow {
+    background: var(--gradient-glow);
+  }
+
+  .nova-gradient {
+    background: var(--gradient-nova);
+  }
+
+  .card-gradient {
+    background: var(--gradient-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .status-trial {
+    @apply bg-yellow-500/20 text-yellow-400 border-yellow-500/30;
+  }
+
+  .status-active {
+    @apply bg-emerald-500/20 text-emerald-400 border-emerald-500/30;
+  }
+
+  .status-expired {
+    @apply bg-orange-500/20 text-orange-400 border-orange-500/30;
+  }
+
+  .status-banned {
+    @apply bg-red-500/20 text-red-400 border-red-500/30;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 5px hsl(var(--nova-cyan) / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 20px hsl(var(--nova-cyan) / 0.5);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

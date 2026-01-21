@@ -1,0 +1,7 @@
+project_id = "kcverunpdrbiiyeqekzw"
+
+[functions.device-register]
+verify_jwt = false
+
+[functions.device-status]
+verify_jwt = false
