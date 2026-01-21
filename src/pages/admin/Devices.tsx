@@ -45,7 +45,8 @@ import {
   Copy,
   Eye,
   Filter,
-  X
+  X,
+  Fingerprint
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -86,6 +87,11 @@ export default function Devices() {
   const copyDeviceId = (deviceId: string) => {
     navigator.clipboard.writeText(deviceId);
     toast.success("Device ID copié");
+  };
+
+  const copyUID = (uid: string) => {
+    navigator.clipboard.writeText(uid);
+    toast.success("UID copié");
   };
 
   const handleExtendTrial = async () => {
@@ -244,11 +250,11 @@ export default function Devices() {
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
+              <TableHead>UID</TableHead>
               <TableHead>Device ID</TableHead>
               <TableHead>Plateforme</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>IP</TableHead>
-              <TableHead>Pays</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Fin Trial</TableHead>
               <TableHead>Dernière activité</TableHead>
@@ -286,22 +292,31 @@ export default function Devices() {
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs font-mono bg-secondary px-2 py-1 rounded">
-                        {device.device_id.slice(0, 12)}...
-                      </code>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyDeviceId(device.device_id);
-                        }}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    {device.uid ? (
+                      <div className="flex items-center gap-1">
+                        <code className="text-xs font-mono font-bold text-nova-cyan bg-nova-cyan/10 px-2 py-1 rounded">
+                          {device.uid}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyUID(device.uid!);
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <code className="text-xs font-mono bg-secondary px-2 py-1 rounded">
+                      {device.device_id.slice(0, 8)}...
+                    </code>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -313,7 +328,6 @@ export default function Devices() {
                   <TableCell className="font-mono text-sm text-muted-foreground">
                     {device.ip_address || '-'}
                   </TableCell>
-                  <TableCell>{device.country || '-'}</TableCell>
                   <TableCell>
                     <StatusBadge status={device.status} />
                   </TableCell>

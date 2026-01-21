@@ -110,11 +110,14 @@ export type Database = {
           manual_override: boolean | null
           notes: string | null
           os_version: string
+          pin_created_at: string | null
+          pin_hash: string | null
           platform: Database["public"]["Enums"]["device_platform"]
           player_version: string
           status: Database["public"]["Enums"]["device_status"]
           trial_end: string | null
           trial_start: string | null
+          uid: string | null
           updated_at: string | null
         }
         Insert: {
@@ -137,11 +140,14 @@ export type Database = {
           manual_override?: boolean | null
           notes?: string | null
           os_version: string
+          pin_created_at?: string | null
+          pin_hash?: string | null
           platform: Database["public"]["Enums"]["device_platform"]
           player_version: string
           status?: Database["public"]["Enums"]["device_status"]
           trial_end?: string | null
           trial_start?: string | null
+          uid?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -164,11 +170,14 @@ export type Database = {
           manual_override?: boolean | null
           notes?: string | null
           os_version?: string
+          pin_created_at?: string | null
+          pin_hash?: string | null
           platform?: Database["public"]["Enums"]["device_platform"]
           player_version?: string
           status?: Database["public"]["Enums"]["device_status"]
           trial_end?: string | null
           trial_start?: string | null
+          uid?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -193,6 +202,7 @@ export type Database = {
         | "set_expiry"
         | "add_note"
         | "batch_action"
+        | "regenerate_pin"
       admin_role: "super_admin" | "admin" | "moderator"
       device_architecture: "arm64" | "x64"
       device_platform: "android" | "ios" | "windows" | "mac"
@@ -335,6 +345,7 @@ export const Constants = {
         "set_expiry",
         "add_note",
         "batch_action",
+        "regenerate_pin",
       ],
       admin_role: ["super_admin", "admin", "moderator"],
       device_architecture: ["arm64", "x64"],

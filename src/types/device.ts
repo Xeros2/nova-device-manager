@@ -28,6 +28,11 @@ export interface Device {
   first_seen: string;
   last_seen: string;
 
+  // UID + PIN system
+  uid: string | null;
+  pin_created_at: string | null;
+  // Note: pin_hash n'est JAMAIS exposé au frontend
+
   notes: string | null;
   created_by: string | null;
   updated_at: string;
@@ -54,7 +59,8 @@ export type ActionType =
   | 'reset_trial'
   | 'set_expiry'
   | 'add_note'
-  | 'batch_action';
+  | 'batch_action'
+  | 'regenerate_pin';
 
 export interface DeviceFilters {
   status?: DeviceStatus;

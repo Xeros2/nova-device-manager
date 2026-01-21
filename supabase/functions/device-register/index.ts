@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,47 @@ interface RegisterRequest {
   architecture: 'arm64' | 'x64';
   player_version: string;
   app_build: number;
+}
+
+// Génère un UID au format NVP-XXXXXX (6 caractères alphanumériques lisibles)
+function generateUID(): string {
+  // Caractères sans ambiguïté (sans I, O, 0, 1 pour lisibilité)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let uid = 'NVP-';
+  for (let i = 0; i < 6; i++) {
+    uid += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return uid;
+}
+
+// Génère un PIN à 6 chiffres
+function generatePIN(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Génère un UID unique en vérifiant les collisions
+async function generateUniqueUID(supabaseClient: any): Promise<string> {
+  let uid: string = '';
+  let exists = true;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while (exists && attempts < maxAttempts) {
+    uid = generateUID();
+    const { data } = await supabaseClient
+      .from('devices')
+      .select('uid')
+      .eq('uid', uid)
+      .maybeSingle();
+    exists = !!data;
+    attempts++;
+  }
+
+  if (exists) {
+    throw new Error('Failed to generate unique UID after ' + maxAttempts + ' attempts');
+  }
+
+  return uid;
 }
 
 Deno.serve(async (req: Request) => {
@@ -51,7 +93,7 @@ Deno.serve(async (req: Request) => {
     // Check if device already exists
     const { data: existingDevice, error: fetchError } = await supabase
       .from('devices')
-      .select('device_id, status, days_left, trial_end, manual_override')
+      .select('device_id, status, days_left, trial_end, manual_override, uid')
       .eq('device_id', body.device_id)
       .maybeSingle();
 
@@ -78,10 +120,11 @@ Deno.serve(async (req: Request) => {
         console.error('[device-register] Update error:', updateError);
       }
 
-      // Return existing device status
+      // Return existing device status (WITHOUT PIN - never return PIN after creation)
       return new Response(
         JSON.stringify({
           status: existingDevice.status,
+          uid: existingDevice.uid,
           days_left: existingDevice.days_left,
           trial_end: existingDevice.trial_end,
           manual_override: existingDevice.manual_override,
@@ -90,7 +133,19 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Create new device
+    // === NOUVEAU DEVICE ===
+    console.log('[device-register] Creating new device with UID and PIN');
+
+    // 1. Générer UID unique
+    const uid = await generateUniqueUID(supabase);
+    console.log('[device-register] Generated UID:', uid);
+
+    // 2. Générer et hasher le PIN
+    const pin = generatePIN();
+    const pinHash = await bcrypt.hash(pin);
+    console.log('[device-register] PIN generated and hashed');
+
+    // 3. Créer le nouveau device
     const newDevice = {
       device_id: body.device_id,
       platform: body.platform,
@@ -106,6 +161,10 @@ Deno.serve(async (req: Request) => {
       days_left: 7,
       first_seen: new Date().toISOString(),
       last_seen: new Date().toISOString(),
+      // Nouveaux champs UID/PIN
+      uid,
+      pin_hash: pinHash,
+      pin_created_at: new Date().toISOString(),
     };
 
     const { data, error } = await supabase
@@ -119,19 +178,26 @@ Deno.serve(async (req: Request) => {
       throw error;
     }
 
-    console.log('[device-register] Device registered successfully:', data.device_id);
+    console.log('[device-register] Device registered successfully:', data.device_id, 'UID:', uid);
 
     // Log the registration
     await supabase.from('device_action_logs').insert({
       device_id: body.device_id,
       action: 'register',
-      details: { platform: body.platform, player_version: body.player_version },
+      details: { 
+        platform: body.platform, 
+        player_version: body.player_version,
+        uid: uid 
+      },
       ip_address,
     });
 
+    // IMPORTANT: Retourner le PIN UNE SEULE FOIS (à la création)
     return new Response(
       JSON.stringify({
         status: 'trial',
+        uid: uid,
+        pin: pin, // ⚠️ Retourné uniquement ici, à la création
         days_left: 7,
         trial_end: trialEnd.toISOString().split('T')[0],
         manual_override: false,

@@ -281,3 +281,27 @@ export function useBatchAction() {
     },
   });
 }
+
+export function useRegeneratePIN() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (deviceId: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-regenerate-pin', {
+        body: { device_id: deviceId }
+      });
+      
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      
+      return data as { success: boolean; device_id: string; uid: string; new_pin: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+      queryClient.invalidateQueries({ queryKey: ['device-logs'] });
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de la régénération du PIN: " + error.message);
+    },
+  });
+}
