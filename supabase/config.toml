@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.device-status]
 verify_jwt = false
+
+[functions.admin-regenerate-pin]
+verify_jwt = false

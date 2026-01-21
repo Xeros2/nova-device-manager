@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useDevice, useDeviceLogs, useUpdateDeviceStatus, useExtendTrial, useUpdateDeviceNote } from "@/hooks/useDevices";
+import { useDevice, useDeviceLogs, useUpdateDeviceStatus, useExtendTrial, useUpdateDeviceNote, useRegeneratePIN } from "@/hooks/useDevices";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { PlatformIcon, getPlatformLabel } from "@/components/admin/PlatformIcon";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowLeft, 
@@ -28,7 +39,9 @@ import {
   Calendar,
   Activity,
   FileText,
-  Save
+  Save,
+  Key,
+  Fingerprint
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -43,15 +56,38 @@ export default function DeviceDetail() {
   const updateStatus = useUpdateDeviceStatus();
   const extendTrial = useExtendTrial();
   const updateNote = useUpdateDeviceNote();
+  const regeneratePIN = useRegeneratePIN();
 
   const [extendDays, setExtendDays] = useState(7);
   const [notes, setNotes] = useState('');
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
+  const [newPinDialogOpen, setNewPinDialogOpen] = useState(false);
+  const [generatedPin, setGeneratedPin] = useState<string | null>(null);
 
   const copyDeviceId = () => {
     if (device?.device_id) {
       navigator.clipboard.writeText(device.device_id);
       toast.success("Device ID copié");
+    }
+  };
+
+  const copyUID = () => {
+    if (device?.uid) {
+      navigator.clipboard.writeText(device.uid);
+      toast.success("UID copié");
+    }
+  };
+
+  const handleRegeneratePIN = async () => {
+    if (deviceId) {
+      try {
+        const result = await regeneratePIN.mutateAsync(deviceId);
+        setGeneratedPin(result.new_pin);
+        setNewPinDialogOpen(true);
+        toast.success("PIN régénéré avec succès");
+      } catch (error) {
+        console.error('Error regenerating PIN:', error);
+      }
     }
   };
 
@@ -185,8 +221,69 @@ export default function DeviceDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Identification UID/PIN */}
+        <Card className="col-span-2 lg:col-span-1 border-nova-cyan/30 bg-gradient-to-br from-nova-cyan/5 to-transparent">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Fingerprint className="h-5 w-5 text-nova-cyan" />
+              Identification
+            </CardTitle>
+            <CardDescription>UID public et PIN sécurisé</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground">UID (public)</p>
+              <div className="flex items-center gap-2 mt-1">
+                <code className="text-lg font-mono font-bold text-nova-cyan bg-nova-cyan/10 px-3 py-1.5 rounded-lg">
+                  {device.uid || 'Non généré'}
+                </code>
+                {device.uid && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={copyUID}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">PIN créé le</p>
+              <p className="font-medium">
+                {device.pin_created_at 
+                  ? format(new Date(device.pin_created_at), 'dd/MM/yyyy HH:mm', { locale: fr })
+                  : '-'}
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+                  disabled={regeneratePIN.isPending}
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Régénérer le PIN
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Régénérer le PIN ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action va remplacer le PIN actuel. L'ancien PIN ne fonctionnera plus.
+                    Le nouveau PIN sera affiché une seule fois.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleRegeneratePIN}>
+                    Confirmer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+
         {/* Device Info */}
-        <Card className="col-span-2">
+        <Card className="col-span-2 lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PlatformIcon platform={device.platform} className="h-5 w-5" />
@@ -396,6 +493,51 @@ export default function DeviceDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog pour afficher le nouveau PIN généré */}
+      <Dialog open={newPinDialogOpen} onOpenChange={(open) => {
+        setNewPinDialogOpen(open);
+        if (!open) setGeneratedPin(null);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-nova-cyan" />
+              Nouveau PIN généré
+            </DialogTitle>
+            <DialogDescription>
+              Copiez ce PIN maintenant. Il ne sera plus jamais affiché.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 text-center">
+            <div className="inline-flex items-center gap-3 bg-nova-cyan/10 border border-nova-cyan/30 rounded-xl px-6 py-4">
+              <code className="text-3xl font-mono font-bold tracking-widest text-nova-cyan">
+                {generatedPin}
+              </code>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => {
+                  if (generatedPin) {
+                    navigator.clipboard.writeText(generatedPin);
+                    toast.success("PIN copié");
+                  }
+                }}
+              >
+                <Copy className="h-5 w-5" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              UID: <span className="font-mono font-medium text-foreground">{device?.uid}</span>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setNewPinDialogOpen(false)} className="w-full">
+              J'ai copié le PIN
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
