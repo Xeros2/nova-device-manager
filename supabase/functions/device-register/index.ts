@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
-// Deno EdgeRuntime declaration
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
 
 const corsHeaders = {
@@ -19,12 +18,12 @@ interface RegisterRequest {
   app_build: number;
 }
 
-// Async logging helper
-async function logToTable(supabase: ReturnType<typeof createClient>, table: string, data: Record<string, unknown>): Promise<void> {
-  try {
-    await supabase.from(table).insert(data);
-  } catch (e) {
-    console.error(`[LOG] Failed to log to ${table}:`, e);
+// Async logging - uses any to avoid strict typing issues with dynamic table names
+async function logToTable(supabase: any, table: string, data: any): Promise<void> {
+  try { 
+    await supabase.from(table).insert(data); 
+  } catch (e) { 
+    console.error(`[LOG] Failed to log to ${table}:`, e); 
   }
 }
 
@@ -41,19 +40,26 @@ function generatePIN(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function generateUniqueUID(supabaseClient: ReturnType<typeof createClient>): Promise<string> {
+async function generateUniqueUID(supabase: any): Promise<string> {
   let uid = '';
   let exists = true;
   let attempts = 0;
   while (exists && attempts < 10) {
     uid = generateUID();
-    const { data } = await supabaseClient.from('devices').select('uid').eq('uid', uid).maybeSingle();
+    const { data } = await supabase.from('devices').select('uid').eq('uid', uid).maybeSingle();
     exists = !!data;
     attempts++;
   }
   if (exists) throw new Error('Failed to generate unique UID');
   return uid;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// ⚠️ RÈGLE DE SÉCURITÉ CRITIQUE ⚠️
+// UID + PIN sont générés UNIQUEMENT à la PREMIÈRE inscription
+// Ils ne sont JAMAIS recréés, même si le device revient
+// Le PIN n'est retourné qu'UNE SEULE FOIS (status 201)
+// ══════════════════════════════════════════════════════════════════════════
 
 Deno.serve(async (req: Request) => {
   const startTime = Date.now();
@@ -86,6 +92,9 @@ Deno.serve(async (req: Request) => {
     if (fetchError) throw fetchError;
 
     if (existingDevice) {
+      // SÉCURITÉ: Device déjà enregistré - retourner UID existant SANS PIN
+      console.log('[device-register] SECURITY: Device already registered, returning existing UID without PIN');
+      
       await supabase.from('devices').update({
         last_seen: new Date().toISOString(),
         player_version: body.player_version,
@@ -105,6 +114,9 @@ Deno.serve(async (req: Request) => {
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // NOUVEAU DEVICE - Génération unique UID + PIN
+    console.log('[device-register] SECURITY: Creating NEW device with UID and PIN');
+    
     const uid = await generateUniqueUID(supabase);
     const pin = generatePIN();
     const pinHash = await bcrypt.hash(pin);
@@ -120,6 +132,7 @@ Deno.serve(async (req: Request) => {
 
     if (error) throw error;
 
+    // Race condition check
     if (data.uid !== uid) {
       return new Response(JSON.stringify({
         status: data.status, uid: data.uid, days_left: data.days_left,
@@ -127,12 +140,15 @@ Deno.serve(async (req: Request) => {
       }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    console.log('[device-register] Device registered successfully:', data.device_id, 'UID:', uid);
+
     EdgeRuntime.waitUntil(Promise.all([
       logToTable(supabase, 'device_action_logs', { device_id: body.device_id, action: 'register', details: { platform: body.platform, uid }, ip_address }),
       logToTable(supabase, 'device_logs', { device_id: body.device_id, uid, action: 'device_registered', new_status: 'trial', actor_type: 'system', ip_address }),
       logToTable(supabase, 'api_logs', { endpoint: '/device-register', method: 'POST', device_id: body.device_id, uid, ip_address, response_status: 201, response_time_ms: Date.now() - startTime }),
     ]));
 
+    // IMPORTANT: Retourner le PIN UNE SEULE FOIS
     return new Response(JSON.stringify({
       status: 'trial', uid, pin, days_left: 7,
       trial_end: trialEnd.toISOString().split('T')[0], manual_override: false,

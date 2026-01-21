@@ -8,8 +8,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function logToTable(supabase: ReturnType<typeof createClient>, table: string, data: Record<string, unknown>): Promise<void> {
-  try { await supabase.from(table).insert(data); } catch (e) { console.error(`[LOG] Failed:`, e); }
+// Async logging - uses any to avoid strict typing issues with dynamic table names
+async function logToTable(supabase: any, table: string, data: any): Promise<void> {
+  try { 
+    await supabase.from(table).insert(data); 
+  } catch (e) { 
+    console.error(`[LOG] Failed to log to ${table}:`, e); 
+  }
 }
 
 function generatePIN(): string {
@@ -61,12 +66,15 @@ Deno.serve(async (req: Request) => {
 
     await supabase.from('devices').update({ pin_hash: newPinHash, pin_created_at: new Date().toISOString() }).eq('device_id', body.device_id);
 
+    console.log('[admin-regenerate-pin] PIN regenerated for:', body.device_id);
+
     EdgeRuntime.waitUntil(Promise.all([
       logToTable(supabase, 'device_action_logs', { device_id: body.device_id, action: 'regenerate_pin', details: { reason: 'admin_request' }, admin_id: user.id, ip_address }),
       logToTable(supabase, 'device_logs', { device_id: body.device_id, uid: device.uid, action: 'pin_regenerated', new_status: device.status, actor_type: 'admin', actor_id: user.id, ip_address }),
       logToTable(supabase, 'admin_logs', { admin_id: user.id, admin_email: user.email, action: 'pin_regenerate', target_device_id: body.device_id, target_uid: device.uid, ip_address }),
     ]));
 
+    // Retourner le nouveau PIN (UNE SEULE FOIS)
     return new Response(JSON.stringify({ success: true, device_id: body.device_id, uid: device.uid, new_pin: newPin }), 
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 

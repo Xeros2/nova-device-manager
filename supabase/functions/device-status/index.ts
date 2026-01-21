@@ -7,8 +7,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function logToTable(supabase: ReturnType<typeof createClient>, table: string, data: Record<string, unknown>): Promise<void> {
-  try { await supabase.from(table).insert(data); } catch (e) { console.error(`[LOG] Failed:`, e); }
+// Async logging - uses any to avoid strict typing issues with dynamic table names
+async function logToTable(supabase: any, table: string, data: any): Promise<void> {
+  try { 
+    await supabase.from(table).insert(data); 
+  } catch (e) { 
+    console.error(`[LOG] Failed to log to ${table}:`, e); 
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -45,13 +50,18 @@ Deno.serve(async (req: Request) => {
 
     await supabase.from('devices').update({ last_seen: new Date().toISOString(), ip_address, days_left, status }).eq('device_id', body.device_id);
 
-    const logs = [
+    const logs: Promise<void>[] = [
       logToTable(supabase, 'device_action_logs', { device_id: body.device_id, action: 'status_check', details: { status, days_left }, ip_address }),
       logToTable(supabase, 'device_logs', { device_id: body.device_id, uid: device.uid, action: 'status_check', new_status: status, actor_type: 'system', ip_address }),
     ];
+    
     if (previousStatus !== status) {
-      logs.push(logToTable(supabase, 'device_logs', { device_id: body.device_id, uid: device.uid, action: 'trial_expired', previous_status: previousStatus, new_status: status, actor_type: 'system', ip_address }));
+      logs.push(logToTable(supabase, 'device_logs', { 
+        device_id: body.device_id, uid: device.uid, action: 'trial_expired', 
+        previous_status: previousStatus, new_status: status, actor_type: 'system', ip_address 
+      }));
     }
+    
     EdgeRuntime.waitUntil(Promise.all(logs));
 
     return new Response(JSON.stringify({ status, days_left, trial_end: device.trial_end?.split('T')[0] || null, manual_override: device.manual_override }), 
