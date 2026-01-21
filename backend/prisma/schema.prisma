@@ -1,0 +1,157 @@
+// Nova Player Backend - Prisma Schema
+// Base de données PostgreSQL externe (indépendante de Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ══════════════════════════════════════════════════════════════════════════
+
+enum DeviceStatus {
+  trial
+  active
+  expired
+  banned
+}
+
+enum DevicePlatform {
+  android
+  ios
+  windows
+  mac
+}
+
+enum DeviceArchitecture {
+  arm64
+  x64
+}
+
+enum ActionType {
+  register
+  status_check
+  activate
+  ban
+  unban
+  extend_trial
+  reset_trial
+  set_expiry
+  add_note
+  batch_action
+  regenerate_pin
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MODELS
+// ══════════════════════════════════════════════════════════════════════════
+
+model Device {
+  id              String             @id @default(uuid())
+  device_id       String             @unique
+  
+  // UID + PIN System
+  uid             String?            @unique
+  pin_hash        String?
+  pin_created_at  DateTime?
+  
+  // Device Info
+  platform        DevicePlatform
+  os_version      String
+  device_model    String
+  architecture    DeviceArchitecture
+  player_version  String
+  app_build       Int                @default(1)
+  
+  // Geolocation
+  ip_address      String?
+  country         String?
+  city            String?
+  isp             String?
+  is_vpn          Boolean            @default(false)
+  
+  // Status & Trial
+  status          DeviceStatus       @default(trial)
+  trial_start     DateTime?          @default(now())
+  trial_end       DateTime?
+  days_left       Int                @default(7)
+  extended_count  Int                @default(0)
+  manual_override Boolean            @default(false)
+  
+  // Timestamps
+  first_seen      DateTime           @default(now())
+  last_seen       DateTime           @default(now())
+  
+  // Admin
+  notes           String?
+  created_by      String?
+  updated_at      DateTime           @updatedAt
+  created_at      DateTime           @default(now())
+  
+  // Relations
+  logs            DeviceLog[]
+  action_logs     DeviceActionLog[]
+
+  @@map("devices")
+}
+
+model DeviceLog {
+  id              String    @id @default(uuid())
+  device_id       String
+  uid             String?
+  action          String
+  previous_status String?
+  new_status      String?
+  actor_type      String    @default("system")
+  actor_id        String?
+  reason          String?
+  ip_address      String?
+  created_at      DateTime  @default(now())
+  
+  // Relations
+  device          Device    @relation(fields: [device_id], references: [device_id], onDelete: Cascade)
+
+  @@index([device_id])
+  @@index([created_at])
+  @@map("device_logs")
+}
+
+model DeviceActionLog {
+  id          String    @id @default(uuid())
+  device_id   String
+  action      ActionType
+  details     Json?
+  admin_id    String?
+  ip_address  String?
+  created_at  DateTime  @default(now())
+  
+  // Relations
+  device      Device    @relation(fields: [device_id], references: [device_id], onDelete: Cascade)
+
+  @@index([device_id])
+  @@index([action])
+  @@index([created_at])
+  @@map("device_action_logs")
+}
+
+model ApiLog {
+  id               String    @id @default(uuid())
+  endpoint         String
+  method           String
+  device_id        String?
+  uid              String?
+  ip_address       String?
+  response_status  Int
+  response_time_ms Int
+  error_message    String?
+  created_at       DateTime  @default(now())
+
+  @@index([endpoint])
+  @@index([created_at])
+  @@map("api_logs")
+}
