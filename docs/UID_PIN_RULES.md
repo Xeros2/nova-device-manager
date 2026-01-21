@@ -238,6 +238,60 @@ Toutes les régénérations de PIN sont loggées :
 
 ---
 
+## Garanties de Sécurité
+
+### Règle fondamentale
+
+> **UID + PIN sont générés UNIQUEMENT lors du premier `device-register`. Ils ne sont JAMAIS recréés.**
+
+### Protections implémentées
+
+| Protection | Description |
+|------------|-------------|
+| Vérification préalable | Le système vérifie si `device_id` existe AVANT toute génération |
+| Race condition | Protection via `upsert` avec `onConflict: device_id` |
+| PIN unique | Le PIN n'est retourné qu'avec le status `201 Created` |
+| Logs de sécurité | Toute tentative de ré-enregistrement est loggée |
+
+### Comportement garanti
+
+```
+Premier appel (device_id nouveau):
+  → Status: 201 Created
+  → Réponse: {uid, pin, status, trial_end}
+  → PIN visible UNE SEULE FOIS
+
+Appels suivants (device_id existant):
+  → Status: 200 OK
+  → Réponse: {uid, status, trial_end}
+  → PIN JAMAIS retourné
+```
+
+### Protection Race Condition
+
+Si deux requêtes arrivent simultanément avec le même `device_id` :
+
+1. La première crée le device avec UID + PIN
+2. La seconde détecte le conflit et retourne le device existant SANS PIN
+3. Le PIN n'est donc retourné qu'UNE SEULE FOIS
+
+```typescript
+// Code de protection
+const { data } = await supabase
+  .from('devices')
+  .upsert(newDevice, { 
+    onConflict: 'device_id',
+    ignoreDuplicates: true 
+  });
+
+// Vérification post-insertion
+if (data.uid !== generatedUid) {
+  // Race condition: retourner sans PIN
+}
+```
+
+---
+
 ## FAQ
 
 ### Que faire si l'utilisateur perd son PIN ?
