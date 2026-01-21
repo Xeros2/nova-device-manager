@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["admin_log_action"]
+          admin_email: string | null
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_device_id: string | null
+          target_uid: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["admin_log_action"]
+          admin_email?: string | null
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_device_id?: string | null
+          target_uid?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["admin_log_action"]
+          admin_email?: string | null
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_device_id?: string | null
+          target_uid?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       admin_roles: {
         Row: {
           id: string
@@ -59,6 +98,48 @@ export type Database = {
         }
         Relationships: []
       }
+      api_logs: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          endpoint: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          method: string
+          response_status: number | null
+          response_time_ms: number | null
+          uid: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          method: string
+          response_status?: number | null
+          response_time_ms?: number | null
+          uid?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          method?: string
+          response_status?: number | null
+          response_time_ms?: number | null
+          uid?: string | null
+        }
+        Relationships: []
+      }
       device_action_logs: {
         Row: {
           action: Database["public"]["Enums"]["action_type"]
@@ -86,6 +167,51 @@ export type Database = {
           device_id?: string
           id?: string
           ip_address?: string | null
+        }
+        Relationships: []
+      }
+      device_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["device_log_action"]
+          actor_id: string | null
+          actor_type: Database["public"]["Enums"]["actor_type"]
+          created_at: string
+          device_id: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          new_status: Database["public"]["Enums"]["device_status"] | null
+          previous_status: Database["public"]["Enums"]["device_status"] | null
+          reason: string | null
+          uid: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["device_log_action"]
+          actor_id?: string | null
+          actor_type?: Database["public"]["Enums"]["actor_type"]
+          created_at?: string
+          device_id: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_status?: Database["public"]["Enums"]["device_status"] | null
+          previous_status?: Database["public"]["Enums"]["device_status"] | null
+          reason?: string | null
+          uid?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["device_log_action"]
+          actor_id?: string | null
+          actor_type?: Database["public"]["Enums"]["actor_type"]
+          created_at?: string
+          device_id?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_status?: Database["public"]["Enums"]["device_status"] | null
+          previous_status?: Database["public"]["Enums"]["device_status"] | null
+          reason?: string | null
+          uid?: string | null
         }
         Relationships: []
       }
@@ -189,6 +315,7 @@ export type Database = {
     Functions: {
       has_admin_role: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      purge_old_logs: { Args: never; Returns: undefined }
     }
     Enums: {
       action_type:
@@ -203,8 +330,35 @@ export type Database = {
         | "add_note"
         | "batch_action"
         | "regenerate_pin"
+      actor_type: "system" | "admin" | "user"
+      admin_log_action:
+        | "login"
+        | "logout"
+        | "device_view"
+        | "device_update"
+        | "device_activate"
+        | "device_ban"
+        | "device_unban"
+        | "trial_extend"
+        | "trial_reset"
+        | "pin_regenerate"
+        | "batch_action"
+        | "note_added"
+        | "settings_changed"
       admin_role: "super_admin" | "admin" | "moderator"
       device_architecture: "arm64" | "x64"
+      device_log_action:
+        | "device_registered"
+        | "trial_started"
+        | "trial_extended"
+        | "trial_expired"
+        | "status_check"
+        | "status_changed"
+        | "device_banned"
+        | "device_unbanned"
+        | "pin_regenerated"
+        | "device_activated"
+        | "manual_override_set"
       device_platform: "android" | "ios" | "windows" | "mac"
       device_status: "trial" | "active" | "expired" | "banned"
     }
@@ -347,8 +501,37 @@ export const Constants = {
         "batch_action",
         "regenerate_pin",
       ],
+      actor_type: ["system", "admin", "user"],
+      admin_log_action: [
+        "login",
+        "logout",
+        "device_view",
+        "device_update",
+        "device_activate",
+        "device_ban",
+        "device_unban",
+        "trial_extend",
+        "trial_reset",
+        "pin_regenerate",
+        "batch_action",
+        "note_added",
+        "settings_changed",
+      ],
       admin_role: ["super_admin", "admin", "moderator"],
       device_architecture: ["arm64", "x64"],
+      device_log_action: [
+        "device_registered",
+        "trial_started",
+        "trial_extended",
+        "trial_expired",
+        "status_check",
+        "status_changed",
+        "device_banned",
+        "device_unbanned",
+        "pin_regenerated",
+        "device_activated",
+        "manual_override_set",
+      ],
       device_platform: ["android", "ios", "windows", "mac"],
       device_status: ["trial", "active", "expired", "banned"],
     },
