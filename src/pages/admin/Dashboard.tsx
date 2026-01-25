@@ -10,9 +10,11 @@ import {
   Activity
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useDeviceStats();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -49,24 +51,28 @@ export default function Dashboard() {
           value={stats?.total || 0}
           icon={Smartphone}
           variant="primary"
+          onClick={() => navigate('/admin/devices')}
         />
         <StatCard
           title="Actifs"
           value={stats?.active || 0}
           icon={Play}
           variant="success"
+          onClick={() => navigate('/admin/devices?status=active')}
         />
         <StatCard
           title="En Trial"
           value={stats?.trial || 0}
           icon={Clock}
           variant="warning"
+          onClick={() => navigate('/admin/devices?status=trial')}
         />
         <StatCard
           title="Bannis"
           value={stats?.banned || 0}
           icon={Ban}
           variant="danger"
+          onClick={() => navigate('/admin/devices?status=banned')}
         />
       </div>
 
@@ -75,7 +81,7 @@ export default function Dashboard() {
         {/* Platform Distribution */}
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center gap-2 mb-6">
-            <Activity className="h-5 w-5 text-nova-cyan" />
+            <Activity className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Distribution par plateforme</h2>
           </div>
           <div className="space-y-4">
@@ -107,7 +113,7 @@ export default function Dashboard() {
         {/* Top Countries */}
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center gap-2 mb-6">
-            <Globe className="h-5 w-5 text-nova-cyan" />
+            <Globe className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Top Pays</h2>
           </div>
           {topCountries.length > 0 ? (
@@ -118,7 +124,7 @@ export default function Dashboard() {
                   className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full bg-nova-cyan/20 text-nova-cyan text-xs font-medium flex items-center justify-center">
+                    <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-medium flex items-center justify-center">
                       {index + 1}
                     </span>
                     <span className="font-medium">{country}</span>
@@ -141,6 +147,7 @@ export default function Dashboard() {
           title="Expirés"
           value={stats?.expired || 0}
           icon={TrendingUp}
+          onClick={() => navigate('/admin/devices?status=expired')}
         />
         <StatCard
           title="Taux de conversion"

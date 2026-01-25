@@ -11,11 +11,12 @@ interface StatCardProps {
   };
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   className?: string;
+  onClick?: () => void;
 }
 
 const variantStyles = {
   default: 'border-border',
-  primary: 'border-nova-cyan/30 bg-nova-cyan/5',
+  primary: 'border-primary/30 bg-primary/5',
   success: 'border-emerald-500/30 bg-emerald-500/5',
   warning: 'border-yellow-500/30 bg-yellow-500/5',
   danger: 'border-red-500/30 bg-red-500/5',
@@ -23,7 +24,7 @@ const variantStyles = {
 
 const iconVariantStyles = {
   default: 'text-muted-foreground',
-  primary: 'text-nova-cyan',
+  primary: 'text-primary',
   success: 'text-emerald-400',
   warning: 'text-yellow-400',
   danger: 'text-red-400',
@@ -35,15 +36,18 @@ export function StatCard({
   icon: Icon, 
   trend, 
   variant = 'default',
-  className 
+  className,
+  onClick
 }: StatCardProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border p-6 bg-card transition-all hover:border-primary/30",
+        "relative overflow-hidden rounded-xl border p-6 bg-card transition-all",
         variantStyles[variant],
+        onClick && "cursor-pointer hover:border-primary/50 hover:shadow-lg",
         className
       )}
+      onClick={onClick}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -68,7 +72,7 @@ export function StatCard({
       
       {/* Decorative glow */}
       {variant === 'primary' && (
-        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-nova-cyan/10 blur-2xl" />
+        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />
       )}
     </div>
   );
