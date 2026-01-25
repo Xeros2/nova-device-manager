@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDevices, useUpdateDeviceStatus, useExtendTrial, useBatchAction } from "@/hooks/useDevices";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { PlatformIcon, getPlatformLabel } from "@/components/admin/PlatformIcon";
@@ -46,22 +46,33 @@ import {
   Eye,
   Filter,
   X,
-  Fingerprint
+  Fingerprint,
+  XCircle,
+  RotateCcw
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { DeviceFilters, DeviceStatus, DevicePlatform } from "@/types/device";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Devices() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<DeviceFilters>({});
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
   const [extendDays, setExtendDays] = useState(7);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
+
+  // Sync filters from URL params
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && ['trial', 'active', 'expired', 'banned'].includes(statusParam)) {
+      setFilters(prev => ({ ...prev, status: statusParam as DeviceStatus }));
+    }
+  }, [searchParams]);
 
   const { data: devices, isLoading } = useDevices(filters);
   const updateStatus = useUpdateDeviceStatus();
@@ -240,7 +251,8 @@ export default function Devices() {
       )}
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
+        <div className="min-w-[900px]">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
@@ -373,17 +385,48 @@ export default function Devices() {
                           <Clock className="h-4 w-4 mr-2" />
                           Étendre trial
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => updateStatus.mutate({ 
                             deviceId: device.device_id, 
-                            status: 'banned' 
+                            status: 'expired' 
                           })}
-                          className="text-red-400 focus:text-red-400"
                         >
-                          <Ban className="h-4 w-4 mr-2" />
-                          Bannir
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Expirer
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => updateStatus.mutate({ 
+                            deviceId: device.device_id, 
+                            status: 'trial' 
+                          })}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Reset trial
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {device.status === 'banned' ? (
+                          <DropdownMenuItem 
+                            onClick={() => updateStatus.mutate({ 
+                              deviceId: device.device_id, 
+                              status: 'trial' 
+                            })}
+                            className="text-emerald-400 focus:text-emerald-400"
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Débannir
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem 
+                            onClick={() => updateStatus.mutate({ 
+                              deviceId: device.device_id, 
+                              status: 'banned' 
+                            })}
+                            className="text-red-400 focus:text-red-400"
+                          >
+                            <Ban className="h-4 w-4 mr-2" />
+                            Bannir
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -392,6 +435,7 @@ export default function Devices() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Extend Trial Dialog */}

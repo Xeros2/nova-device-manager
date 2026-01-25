@@ -7,7 +7,8 @@ import {
   Shield,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,13 @@ const navItems = [
   { icon: Settings, label: 'Settings', href: '/admin/settings' },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  isMobile?: boolean;
+}
+
+export function Sidebar({ isOpen = true, onClose, isMobile = false }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
 
@@ -32,35 +39,41 @@ export function Sidebar() {
     navigate("/login");
   };
 
-  return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
-      )}
-    >
+  const SidebarContent = () => (
+    <>
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg nova-gradient flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-sm font-bold text-primary-foreground">N</span>
             </div>
             <span className="font-semibold text-foreground">Nova Admin</span>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
+        {isMobile ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="h-8 w-8"
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -70,6 +83,7 @@ export function Sidebar() {
             key={item.href}
             to={item.href}
             end={item.href === '/admin'}
+            onClick={isMobile ? onClose : undefined}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
@@ -80,7 +94,7 @@ export function Sidebar() {
             }
           >
             <item.icon className="h-5 w-5 shrink-0" />
-            {!collapsed && <span>{item.label}</span>}
+            {(!collapsed || isMobile) && <span>{item.label}</span>}
           </NavLink>
         ))}
       </nav>
@@ -91,14 +105,48 @@ export function Sidebar() {
           variant="ghost"
           className={cn(
             "w-full justify-start gap-3 text-muted-foreground hover:text-destructive",
-            collapsed && "justify-center px-2"
+            collapsed && !isMobile && "justify-center px-2"
           )}
           onClick={handleLogout}
         >
           <LogOut className="h-5 w-5" />
-          {!collapsed && <span>Déconnexion</span>}
+          {(!collapsed || isMobile) && <span>Déconnexion</span>}
         </Button>
       </div>
+    </>
+  );
+
+  // Mobile drawer mode
+  if (isMobile) {
+    return (
+      <>
+        {/* Overlay */}
+        {isOpen && (
+          <div 
+            className="fixed inset-0 z-40 bg-black/50 transition-opacity"
+            onClick={onClose}
+          />
+        )}
+        {/* Drawer */}
+        <aside className={cn(
+          "fixed left-0 top-0 z-50 h-screen w-64 border-r border-sidebar-border bg-sidebar transform transition-transform duration-300",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
+          <SidebarContent />
+        </aside>
+      </>
+    );
+  }
+
+  // Desktop mode
+  return (
+    <aside
+      className={cn(
+        "fixed left-0 top-0 z-40 h-screen border-r border-sidebar-border bg-sidebar transition-all duration-300",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      <SidebarContent />
     </aside>
   );
 }
